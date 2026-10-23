@@ -6,7 +6,7 @@ A template for your own dashboard over your Monotree data. You host it on Cloudf
 - **Your API key stays on the server.** The page only receives the numbers it shows.
 - **Built to be changed by an AI coding agent.** Point Claude Code, Cursor or similar at this folder and describe the dashboard you want. [AGENTS.md](AGENTS.md) tells the agent what it may change and the rules it must keep.
 
-The example shows how many employees use Monotree, weekly activity, adoption by department, and this week's activity against last week's.
+The example, "Team pulse", shows a manager how the departments they manage are doing next to the whole company: course completion per course, and the share of people active each week. Others see the whole company. It also shows what Sign in with Monotree tells the dashboard about the viewer.
 
 ## What you need
 
@@ -44,7 +44,7 @@ You get back a `client_id` and a `client_secret`.
 
 ### 3. Create an API key
 
-In the Monotree CMS, go to **Open API → API Tokens** and create a token with only the scopes the dashboard needs. The example needs `read:stats` only. The token is shown once.
+In the Monotree CMS, go to **Open API → API Tokens** and create a token with only the scopes the dashboard needs. The example needs `read:stats` and `read:groups`. The token is shown once.
 
 ### 4. Configure
 
@@ -52,7 +52,7 @@ In `wrangler.jsonc`, set:
 
 - `MONOTREE_ISSUER`: your Monotree address, e.g. `https://acme.monotree.com`
 - `OIDC_CLIENT_ID`: from step 2
-- `ACCESS`: who may open the dashboard. It starts as `admins`. Options: `anyone`, `admins`, `editors`, `managers`, `group:<id>`, `manager:<id>`, comma-separated. Group ids are in the CMS address bar when you open a group.
+- `ACCESS`: who may open the dashboard. It starts as `admins,managers`. Options: `anyone`, `admins`, `editors`, `managers`, `group:<id>`, `manager:<id>`, comma-separated. Group ids are in the CMS address bar when you open a group.
 
 Then store the secrets with Cloudflare and deploy again:
 
@@ -76,7 +76,7 @@ With an AI coding agent, describe what you want, e.g. *"add a chart of onboardin
 
 Things to know:
 
-- **Everyone who can open the dashboard sees the same data.**
+- **Data can depend on who is looking.** The example shows each manager their own departments. See `src/data.ts`.
 - **Access is checked at sign-in.** A sign-in lasts up to 8 hours. Opening the dashboard from the Monotree app signs in again silently.
 - **Your Cloudflare account holds a copy of Monotree data.** You choose the host and you're responsible for that copy, so check it fits your data-protection agreements.
 

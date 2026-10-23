@@ -38,6 +38,11 @@ const api = openApi(issuer, setting("MONOTREE_API_KEY"));
 
 const loaded: Record<string, unknown> = {};
 for (const [name, dataset] of Object.entries(datasets)) {
+  // a snapshot has no viewer, so it holds the shared datasets only
+  if (dataset.viewerKey) {
+    console.log(`skipped ${name}: per viewer`);
+    continue;
+  }
   loaded[name] = await dataset.load(api);
   console.log(`loaded ${name}`);
 }

@@ -15,13 +15,13 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 - **Sign-in** is "Sign in with Monotree" (OpenID Connect). An employee who opens the dashboard from the Monotree app arrives signed in, with no prompt. Anyone else is sent to the Monotree login page.
 - **Who may see it** is the `ACCESS` setting in `wrangler.jsonc`, checked once at sign-in against the employee's roles and groups. See `src/access.ts`.
 - **The data** comes from the [Monotree Open API](https://docs.monotree.com/open-api/) with a key that stays on the server. The browser only ever sees what `src/data.ts` returns.
-- **Every viewer sees the same data.** There is no per-viewer data yet, such as a manager seeing only their own department. Don't try to build it by sending group ids from the browser.
+- **Data can depend on who is looking.** A dataset with a `viewerKey` gets the signed-in employee (`sub`, `name`, `roles`, `groups`, `managed_groups`) from the session, never from the browser. The example uses it to show a manager their own departments. `/auth/me` returns the same object to the page.
 
 ## Files
 
 | File | Change it? | What it is |
 |---|---|---|
-| `src/data.ts` | **Yes** | The datasets: which API calls are made and what is returned |
+| `src/data.ts` | **Yes** | The datasets: which API calls are made and what is returned, shared or per viewer |
 | `public/index.html`, `public/app.js`, `public/style.css` | **Yes** | The page. `load("<name>")` in `app.js` fetches a dataset |
 | `wrangler.jsonc` | Settings only | Issuer, client id, `ACCESS` |
 | `src/access.ts` | Rarely | The `ACCESS` words. Add a word here if you need a new kind of rule |
@@ -32,17 +32,18 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 
 1. **Never put a secret in the browser.** The API key, client secret and session secret live only in Worker secrets (`wrangler secret put`) or `.dev.vars`. Nothing under `public/` may contain them. Never commit `.dev.vars`.
 2. **Never forward requests to the API.** Don't add a route that takes a path, endpoint, filter or group id from the browser and passes it to Monotree. Every signed-in viewer would then hold the full power of the key. Add a named dataset to `src/data.ts` instead, with its parameters fixed in code.
-3. **Return the least data the page needs.** Shape each dataset in `load()`: counts, rates and totals, not raw rows. Never return names, emails, birth dates or anything else about individual employees unless the user explicitly asks, and `ACCESS` is narrowed to people allowed to see it (for example admins).
-4. **Use a key with the fewest scopes.** Note the scope each dataset needs in a comment next to it, and tell the user the full list. The example needs only `read:stats`. A key with `read:users` can read every employee's profile, so ask before you depend on it.
-5. **Mind the rate limit.** The API allows 60 requests a minute per key. Set `cacheSeconds` to 300 or more, and match the endpoint's own cache where its docs give one (the `/stats` endpoints cache for an hour). Avoid `api.all()` over large lists on every load.
-6. **Keep the security headers.** If the page needs a script or style from another host, add that one host to `content-security-policy` in `src/worker.ts`. Don't remove the policy or add `*`. Load libraries from a pinned version with an `integrity` hash, as `index.html` does with Chart.js. Every CDN request also tells that CDN the viewer's IP address.
-7. **Don't touch sign-in.** In particular, never add `prompt=login` (it breaks opening from the app), never log `login_hint`, and never weaken the checks in `src/oidc.ts`.
-8. **`ACCESS` is the customer's decision.** It ships as `admins`. Don't widen it unless the user asks for it in so many words.
+3. **Per-viewer data comes from the session, and its `viewerKey` covers it.** Read the viewer only through `load(api, viewer)`. `viewerKey` must cover every field of the viewer that `load` uses, because results are cached per key: a key that leaves something out shows one viewer another's data. Group ids in `managed_groups` include custom groups and the App Managers group (every manager is in it). Filter to the type you mean, as the example does with departments, before passing ids to the API.
+4. **Return the least data the page needs.** Shape each dataset in `load()`: counts, rates and totals, not raw rows. Never return names, emails, birth dates or anything else about individual employees unless the user explicitly asks, and `ACCESS` is narrowed to people allowed to see it (for example admins).
+5. **Use a key with the fewest scopes.** Note the scope each dataset needs in a comment next to it, and tell the user the full list. The example needs `read:stats` and `read:groups`. A key with `read:users` can read every employee's profile, so ask before you depend on it.
+6. **Mind the rate limit.** The API allows 60 requests a minute per key. Set `cacheSeconds` to 300 or more, and match the endpoint's own cache where its docs give one (the `/stats` endpoints cache for an hour). Avoid `api.all()` over large lists on every load.
+7. **Keep the security headers.** If the page needs a script or style from another host, add that one host to `content-security-policy` in `src/worker.ts`. Don't remove the policy or add `*`. Load libraries from a pinned version with an `integrity` hash, as `index.html` does with Chart.js. Every CDN request also tells that CDN the viewer's IP address.
+8. **Don't touch sign-in.** In particular, never add `prompt=login` (it breaks opening from the app), never log `login_hint`, and never weaken the checks in `src/oidc.ts`.
+9. **`ACCESS` is the customer's decision.** It ships as `admins,managers`. Don't widen it unless the user asks for it in so many words.
 
 ## Adding a chart
 
 1. Find the endpoint in the API reference: <https://docs.monotree.com/llms.txt> is the whole reference as plain text. Useful for dashboards: `/stats/users`, `/stats/engagement`, `/stats/adoption`, `/stats/content` (`read:stats`), `/stats/academy/*` (`read:stats`), surveys and their answers (`read:surveys`), forms and responses (`read:forms`, `read:formresponses`).
-2. Add a dataset to `src/data.ts` that calls it and returns only what the chart shows.
+2. Add a dataset to `src/data.ts` that calls it and returns only what the chart shows. If it depends on who is looking, give it a `viewerKey` (rule 3).
 3. In `public/app.js`, `await load("<name>")` and draw it. Chart.js 4 is already on the page.
 4. Tell the user which scope the key now needs.
 
@@ -60,7 +61,7 @@ Put the settings in `.dev.vars` (copy `.dev.vars.example`). Values there overrid
 
 ## Snapshot mode (no sign-in)
 
-`scripts/snapshot.ts` bakes the data into a static copy of the page, served from a long random path, with no sign-in at all. Some customers choose this because it needs no client registration. **Anyone who has the link sees the data.** Before you set it up, tell the user, in plain words:
+`scripts/snapshot.ts` bakes the shared datasets into a static copy of the page, served from a long random path, with no sign-in at all. Per-viewer datasets are left out: a snapshot has no viewer. Some customers choose this because it needs no client registration. **Anyone who has the link sees the data.** Before you set it up, tell the user, in plain words:
 
 - The link leaks in ways people don't expect: link previews in Slack and Teams, browser history and sync, forwarded messages, screenshots, shared screens.
 - **People who leave the company keep the link.** The signed-in dashboard locks them out on the day they leave; a snapshot never does. This can't be fixed afterwards, only by rotating the link.

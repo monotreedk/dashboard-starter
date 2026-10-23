@@ -17,10 +17,11 @@
     "OIDC_CLIENT_ID": "",
     // who may open the dashboard: anyone, admins, editors, managers, group:<id>, manager:<id>
     // comma-separated, any match is enough. See src/access.ts
-    "ACCESS": "admins"
+    "ACCESS": "admins,managers"
   }
   // secrets are not kept in this file. Set them with `npx wrangler secret put <NAME>`:
   //   OIDC_CLIENT_SECRET   from Monotree, with the client_id
-  //   MONOTREE_API_KEY     an Open API key (mono_...) with only the scopes src/data.ts needs
+  //   MONOTREE_API_KEY     an Open API key (mono_...) with only the scopes src/data.ts needs:
+  //                        read:stats and read:groups for the example
   //   SESSION_SECRET       a long random string: `openssl rand -base64 32`
 }

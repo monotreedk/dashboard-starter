@@ -5,14 +5,14 @@
 //   /auth/login      sign-in started here (Flow 2, the Monotree login page)
 //   /auth/callback   back from Monotree: check the id_token and the ACCESS rule
 //   /auth/logout     end the session
-//   /auth/me         who is signed in, for the page header
+//   /auth/me         the signed-in employee: what Sign in with Monotree told us
 //   /data/<name>     a dataset from src/data.ts
 //   anything else    the files in public/
 //
 // You should not need to change this file. The data lives in src/data.ts and
 // the page in public/.
 
-import { allows, parseAccess } from "./access.ts";
+import { allows, parseAccess, type Viewer } from "./access.ts";
 import { datasets } from "./data.ts";
 import { OpenApiError, openApi } from "./monotree.ts";
 import { authorizeUrl, challengeFor, discover, exchangeCode, randomString, verifyIdToken } from "./oidc.ts";
@@ -36,7 +36,11 @@ const PENDING_MINUTES = 10;
 const SESSION = "mt_session";
 const PENDING = "mt_pending";
 
-type Session = { sub: string; name?: string };
+// the viewer as Monotree described them at sign-in, given to per-viewer datasets
+type Session = Viewer & { name?: string };
+
+// browsers drop cookies over 4 KB
+const MAX_COOKIE = 3800;
 type Pending = { state: string; nonce: string; verifier: string; target: string };
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -166,12 +170,23 @@ async function callback(env: Env, url: URL, request: Request): Promise<Response>
     return page(403, "No access", "This dashboard is only open to some employees. Ask whoever shared it with you if you think you should have access.", [clearPending]);
   }
 
-  const session: Session = { sub: claims.sub, name: claims.name };
-  const sessionCookie = cookie(SESSION, await seal(env.SESSION_SECRET, session, SESSION_HOURS * 3600), {
-    maxAge: SESSION_HOURS * 3600,
-    path: "/",
-    secure,
-  });
+  const session: Session = {
+    sub: claims.sub,
+    name: claims.name,
+    roles: claims.roles,
+    groups: claims.groups,
+    managed_groups: claims.managed_groups,
+  };
+  let sealedSession = await seal(env.SESSION_SECRET, session, SESSION_HOURS * 3600);
+
+  // someone in hundreds of groups would overflow the cookie: keep their roles and
+  // managed groups, and leave out the full group list
+  if (sealedSession.length > MAX_COOKIE) {
+    console.warn(`groups left out of the session of ${claims.sub}: ${claims.groups?.length} groups`);
+    sealedSession = await seal(env.SESSION_SECRET, { ...session, groups: undefined }, SESSION_HOURS * 3600);
+  }
+
+  const sessionCookie = cookie(SESSION, sealedSession, { maxAge: SESSION_HOURS * 3600, path: "/", secure });
 
   return redirect(safePath(pending.target), [clearPending, sessionCookie]);
 }
@@ -181,13 +196,15 @@ async function callback(env: Env, url: URL, request: Request): Promise<Response>
 // custom domain, so don't count on it on workers.dev
 const memory = new Map<string, { until: number; value: Promise<unknown> }>();
 
-async function dataset(env: Env, name: string, context: ExecutionContext): Promise<Response> {
+async function dataset(env: Env, name: string, viewer: Viewer, context: ExecutionContext): Promise<Response> {
   const definition = Object.hasOwn(datasets, name) ? datasets[name] : undefined;
   if (!definition) return json(404, { message: `No dataset called ${name}` });
 
+  // a per-viewer dataset is cached per viewerKey, a shared one once for everyone
+  const key = definition.viewerKey ? `${name}/${encodeURIComponent(definition.viewerKey(viewer))}` : name;
   const now = Date.now();
-  const cached = memory.get(name);
-  const cacheKey = new Request(`https://dashboard-cache.invalid/${encodeURIComponent(issuerOf(env))}/${name}`);
+  const cached = memory.get(key);
+  const cacheKey = new Request(`https://dashboard-cache.invalid/${encodeURIComponent(issuerOf(env))}/${key}`);
 
   try {
     if (cached && cached.until > now) return json(200, await cached.value);
@@ -195,8 +212,9 @@ async function dataset(env: Env, name: string, context: ExecutionContext): Promi
     const shared = await caches.default.match(cacheKey);
     if (shared) return json(200, await shared.json());
 
-    const value = definition.load(openApi(issuerOf(env), env.MONOTREE_API_KEY));
-    memory.set(name, { until: now + definition.cacheSeconds * 1000, value });
+    const api = openApi(issuerOf(env), env.MONOTREE_API_KEY);
+    const value = definition.viewerKey ? definition.load(api, viewer) : definition.load(api);
+    memory.set(key, { until: now + definition.cacheSeconds * 1000, value });
 
     const body = JSON.stringify(await value);
     context.waitUntil(caches.default.put(cacheKey, new Response(body, {
@@ -205,7 +223,7 @@ async function dataset(env: Env, name: string, context: ExecutionContext): Promi
 
     return json(200, JSON.parse(body));
   } catch (error) {
-    memory.delete(name);
+    memory.delete(key);
     console.error(`dataset ${name}:`, error);
 
     if (error instanceof OpenApiError && error.status === 429) {
@@ -241,8 +259,11 @@ export default {
         return redirect(`/auth/login?return=${encodeURIComponent(url.pathname + url.search)}`);
       }
 
-      if (url.pathname === "/auth/me") return json(200, { sub: session.sub, name: session.name ?? null });
-      if (url.pathname.startsWith("/data/")) return await dataset(env, url.pathname.slice("/data/".length), context);
+      if (url.pathname === "/auth/me") {
+        const { exp, ...viewer } = session;
+        return json(200, viewer);
+      }
+      if (url.pathname.startsWith("/data/")) return await dataset(env, url.pathname.slice("/data/".length), session, context);
 
       return withHeaders(await env.ASSETS.fetch(request));
     } catch (error) {

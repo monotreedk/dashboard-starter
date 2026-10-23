@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Monotree dashboard</title>
+  <title>Team pulse</title>
   <!-- relative paths, so the page also works from a snapshot's folder -->
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
@@ -14,35 +14,49 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>How we use Monotree</h1>
-      <p class="muted" id="subtitle">Loading…</p>
-    </div>
-    <p class="muted" id="viewer"></p>
+  <nav class="bar">
+    <span class="brand"><img src="favicon.svg" alt="" width="22" height="22"> Team pulse</span>
+    <span class="viewer" id="viewer"></span>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow" id="eyebrow">&nbsp;</p>
+    <h1 id="greeting">Loading…</h1>
+    <p class="lede" id="lede"></p>
   </header>
 
   <main>
-    <section class="tiles" id="tiles" aria-label="Employees"></section>
+    <section class="versus" id="versus" aria-label="Your team against the company"></section>
 
     <section class="card">
-      <h2>Active employees per week</h2>
-      <div class="chart"><canvas id="engagement" aria-label="Active employees per week"></canvas></div>
+      <div class="card-head">
+        <h2>Courses</h2>
+        <p class="legend" id="course-legend"></p>
+      </div>
+      <p class="hint" id="course-hint"></p>
+      <ol class="dumbbells" id="courses"></ol>
     </section>
 
     <section class="card">
-      <h2>Adoption by department</h2>
-      <p class="muted" id="adoption-average"></p>
-      <div class="chart tall"><canvas id="adoption" aria-label="Share of active employees per department"></canvas></div>
+      <div class="card-head">
+        <h2>Share of people active each week</h2>
+      </div>
+      <div class="chart"><canvas id="weekly" aria-label="Share of people active each week"></canvas></div>
     </section>
 
-    <section class="card">
-      <h2>This week against last week</h2>
-      <table id="content">
-        <thead><tr><th>Activity</th><th>This week</th><th>Last week</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <section class="card identity" id="identity" hidden>
+      <div class="card-head">
+        <h2>What Monotree told this dashboard about you</h2>
+      </div>
+      <p class="hint">Sign in with Monotree sends who you are, your CMS roles and the ids of your groups. The <code>ACCESS</code> rule uses them to let you in, and <code>src/data.ts</code> gets them as <code>viewer</code> to tailor what you see. Nothing else about you leaves Monotree.</p>
+      <dl class="facts" id="facts"></dl>
+      <details>
+        <summary>Show as JSON</summary>
+        <pre id="claims"></pre>
+      </details>
     </section>
   </main>
+
+  <footer>Built on the <a href="https://docs.monotree.com/open-api/">Monotree Open API</a></footer>
 </body>
 </html>
