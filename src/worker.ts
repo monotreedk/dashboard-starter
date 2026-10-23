@@ -74,7 +74,7 @@ const page = (status: number, title: string, message: string, cookies: string[] 
 
   return withHeaders(new Response(
     `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escape(title)}</title>
+<title>${escape(title)}</title><link rel="icon" href="data:,">
 <style>body{font:16px/1.5 system-ui,sans-serif;margin:0;padding:48px 16px;color:#1f2933;background:#f7f8fa}main{max-width:480px;margin:auto}</style>
 <main><h1>${escape(title)}</h1><p>${message}</p></main></html>`,
     { status, headers },
@@ -255,7 +255,13 @@ export default {
       const session = sealed ? await unseal<Session>(env.SESSION_SECRET, sealed) : null;
 
       if (!session) {
-        if (url.pathname.startsWith("/data/") || url.pathname === "/auth/me") return json(401, { message: "Sign in first." });
+        // only a page the browser navigates to starts a sign-in. A favicon, script
+        // or fetch must not: each would start a Monotree authorization of its own
+        // and overwrite the pending sign-in cookie
+        const navigation = request.headers.get("sec-fetch-mode") === "navigate"
+          || (!request.headers.has("sec-fetch-mode") && (request.headers.get("accept") ?? "").includes("text/html"));
+
+        if (!navigation || url.pathname.startsWith("/data/") || url.pathname === "/auth/me") return json(401, { message: "Sign in first." });
         return redirect(`/auth/login?return=${encodeURIComponent(url.pathname + url.search)}`);
       }
 
