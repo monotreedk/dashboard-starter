@@ -26,7 +26,7 @@ npm install
 npx wrangler deploy
 ```
 
-Wrangler prints the dashboard's address, for example `https://monotree-dashboard.<your-account>.workers.dev`. A custom domain such as `dashboard.example.com` works too: add it in the Cloudflare dashboard. Decide on the address now, because sign-in is registered for it. Until step 4, the dashboard shows an error.
+Wrangler prints the dashboard's address, for example `https://monotree-dashboard.<your-account>.workers.dev`. A custom domain such as `dashboard.example.com` works too: add it in the Cloudflare dashboard. Decide on the address now, because sign-in is registered for exactly that address. With a custom domain, turn off the `workers.dev` address in Cloudflare (or set `"workers_dev": false` in `wrangler.jsonc`), since sign-in fails there. Until step 4, the dashboard shows an error.
 
 ### 2. Ask Monotree to register it
 

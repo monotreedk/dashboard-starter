@@ -1,13 +1,16 @@
 // A small client for the Monotree Open API: https://docs.monotree.com/open-api/
 // Used by the Worker and by the snapshot script. The key never leaves the server.
 
+// plain fields, not constructor parameter properties: node runs this file
+// for the snapshot script and cannot strip those
 export class OpenApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-    readonly retryAfter: number | null = null,
-  ) {
+  readonly status: number;
+  readonly retryAfter: number | null;
+
+  constructor(status: number, message: string, retryAfter: number | null = null) {
     super(message);
+    this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 

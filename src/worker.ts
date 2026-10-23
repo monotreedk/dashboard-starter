@@ -132,6 +132,10 @@ async function callback(env: Env, url: URL, request: Request): Promise<Response>
   const pending = sealed ? await unseal<Pending>(env.SESSION_SECRET, sealed) : null;
 
   const error = url.searchParams.get("error");
+  // Monotree servers from before the groups scope refuse it
+  if (error === "invalid_scope") {
+    return page(400, "Monotree needs an update", "This Monotree server does not offer the roles and groups the dashboard needs yet. Ask Monotree to update it.", [clearPending]);
+  }
   if (error) {
     return page(400, "Sign-in failed", `Monotree said: ${escape(error)}. <a href="/auth/login">Try again</a>.`, [clearPending]);
   }
@@ -150,9 +154,16 @@ async function callback(env: Env, url: URL, request: Request): Promise<Response>
   });
   const claims = await verifyIdToken(document, idToken, { issuer, clientId: env.OIDC_CLIENT_ID, nonce: pending.nonce });
 
-  if (!allows(parseAccess(env.ACCESS), claims)) {
-    const hint = claims.roles === undefined ? " (Monotree sent no roles or groups: this Monotree server may be too old for the groups scope.)" : "";
-    return page(403, "Not for you, sorry", `This dashboard is only open to some employees.${escape(hint)}`, [clearPending]);
+  let rules;
+  try {
+    rules = parseAccess(env.ACCESS);
+  } catch (problem) {
+    console.error(problem);
+    return page(500, "Dashboard not set up", "The ACCESS setting is missing or wrong. See src/access.ts.", [clearPending]);
+  }
+
+  if (!allows(rules, claims)) {
+    return page(403, "No access", "This dashboard is only open to some employees. Ask whoever shared it with you if you think you should have access.", [clearPending]);
   }
 
   const session: Session = { sub: claims.sub, name: claims.name };

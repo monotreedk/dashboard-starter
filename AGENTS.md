@@ -56,7 +56,7 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 
 Put the settings in `.dev.vars` (copy `.dev.vars.example`). Values there override `wrangler.jsonc`, so you can also set `MONOTREE_ISSUER`, `OIDC_CLIENT_ID` and `ACCESS` there.
 
-`npm test` runs the unit tests and `npm run check` the type check. Run both before you deploy.
+`npm test` runs the unit tests (they need [Bun](https://bun.sh)) and `npm run check` the type check. Run both before you deploy.
 
 ## Snapshot mode (no sign-in)
 
