@@ -2,6 +2,8 @@
 
 This repository is a dashboard over a company's Monotree data. It runs as a Cloudflare Worker, and employees open it from the Monotree app, already signed in. Read this whole file before you change anything. The rules under "Rules" are not style preferences: breaking one leaks employee data.
 
+**Setting up a new dashboard for someone?** Follow [SETUP.md](SETUP.md) step by step.
+
 ## How it works
 
 ```

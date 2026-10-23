@@ -8,64 +8,25 @@ A template for your own dashboard over your Monotree data. You host it on Cloudf
 
 The example, "Team pulse", shows a manager how the departments they manage are doing next to the whole company: course completion per course, and the share of people active each week. Others see the whole company. It also shows what Sign in with Monotree tells the dashboard about the viewer.
 
-## What you need
+## Get started
 
-- A Cloudflare account. The free plan is enough.
-- An admin in your Monotree CMS, to create an API key.
-- Monotree's help to register the dashboard for sign-in (step 2).
-- Node.js 20 or newer, if you deploy from your own machine.
+You don't need to be a developer. You need:
 
-## Set it up
+- **An AI assistant that can work on your computer**, such as [Claude Code](https://claude.com/claude-code), Cursor or Codex. A chat window alone can't download and deploy things.
+- **A Cloudflare account.** The free plan is enough, and the assistant helps you create one.
+- **A Monotree admin**, to create an API key and add the dashboard to the app.
+- **About half an hour**, plus a reply from Monotree, which registers the dashboard for sign-in.
 
-### 1. Deploy it
-
-From your machine:
+Paste this into your assistant:
 
 ```
-npm install
-npx wrangler deploy
+Set up a Monotree dashboard for me from https://github.com/monotreedk/dashboard-starter.
+Follow its SETUP.md.
 ```
 
-Wrangler prints the dashboard's address, for example `https://monotree-dashboard.<your-account>.workers.dev`. A custom domain such as `dashboard.example.com` works too: add it in the Cloudflare dashboard. Decide on the address now, because sign-in is registered for exactly that address. With a custom domain, turn off the `workers.dev` address in Cloudflare (or set `"workers_dev": false` in `wrangler.jsonc`), since sign-in fails there. Until step 4, the dashboard shows an error.
+It downloads the template, asks what you want to see and who should see it, writes the email to send to Monotree, and does the rest. It never needs your passwords or keys: you type those into Cloudflare yourself.
 
-### 2. Ask Monotree to register it
-
-Send your Monotree contact:
-
-| | Value |
-|---|---|
-| Client type | confidential |
-| Name | e.g. "Engagement dashboard" |
-| Redirect URI | `https://<your address>/auth/callback` |
-| Login initiation URI | `https://<your address>/auth/initiate` |
-| Target link prefix | `https://<your address>/` |
-
-You get back a `client_id` and a `client_secret`.
-
-### 3. Create an API key
-
-In the Monotree CMS, go to **Open API → API Tokens** and create a token with only the scopes the dashboard needs. The example needs `read:stats` and `read:groups`. The token is shown once.
-
-### 4. Configure
-
-In `wrangler.jsonc`, set:
-
-- `MONOTREE_ISSUER`: your Monotree address, e.g. `https://acme.monotree.com`
-- `OIDC_CLIENT_ID`: from step 2
-- `ACCESS`: who may open the dashboard. It starts as `admins,managers`. Options: `anyone`, `admins`, `editors`, `managers`, `group:<id>`, `manager:<id>`, comma-separated. Group ids are in the CMS address bar when you open a group.
-
-Then store the secrets with Cloudflare and deploy again:
-
-```
-npx wrangler secret put OIDC_CLIENT_SECRET     # from step 2
-npx wrangler secret put MONOTREE_API_KEY       # from step 3
-npx wrangler secret put SESSION_SECRET         # any long random string: openssl rand -base64 32
-npx wrangler deploy
-```
-
-### 5. Add it to the Monotree app
-
-In the CMS, add a menu link of type **External app** with the URL `https://<your address>/`. Employees who tap it land on the dashboard, signed in. Target the link at the same groups as your `ACCESS` rule, so people don't see a link they can't open.
+Developers can follow [SETUP.md](SETUP.md) by hand. The commands are the same.
 
 ## Change the dashboard
 
