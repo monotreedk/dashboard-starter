@@ -1,0 +1,9 @@
+// Snapshot mode: static files only, no Worker code and no sign-in. See AGENTS.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "monotree-dashboard-snapshot",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./snapshot"
+  }
+}

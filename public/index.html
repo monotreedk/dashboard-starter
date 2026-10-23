@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Monotree dashboard</title>
+  <!-- relative paths, so the page also works from a snapshot's folder -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+          integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
+          crossorigin="anonymous" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>How we use Monotree</h1>
+      <p class="muted" id="subtitle">Loading…</p>
+    </div>
+    <p class="muted" id="viewer"></p>
+  </header>
+
+  <main>
+    <section class="tiles" id="tiles" aria-label="Employees"></section>
+
+    <section class="card">
+      <h2>Active employees per week</h2>
+      <div class="chart"><canvas id="engagement" aria-label="Active employees per week"></canvas></div>
+    </section>
+
+    <section class="card">
+      <h2>Adoption by department</h2>
+      <p class="muted" id="adoption-average"></p>
+      <div class="chart tall"><canvas id="adoption" aria-label="Share of active employees per department"></canvas></div>
+    </section>
+
+    <section class="card">
+      <h2>This week against last week</h2>
+      <table id="content">
+        <thead><tr><th>Activity</th><th>This week</th><th>Last week</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `npm run dev` and the snapshot script. Never commit .dev.vars.
+OIDC_CLIENT_SECRET=
+MONOTREE_API_KEY=
+SESSION_SECRET=

@@ -1,0 +1,38 @@
+{
+  "name": "monotree-dashboard-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261008.1",
+    "typescript": "7.0.2",
+    "wrangler": "4.149.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "MONOTREE_ISSUER": {
+        "description": "The customer's Monotree address, e.g. https://acme.monotree.com. No trailing slash."
+      },
+      "OIDC_CLIENT_ID": {
+        "description": "The client_id Monotree sent you when it registered this dashboard."
+      },
+      "OIDC_CLIENT_SECRET": {
+        "description": "The client_secret Monotree sent you with the client_id."
+      },
+      "MONOTREE_API_KEY": {
+        "description": "An Open API key (mono_...) from Monotree's CMS, with only the scopes src/data.ts needs. read:stats for the example."
+      },
+      "SESSION_SECRET": {
+        "description": "A long random string. Generate one with: openssl rand -base64 32"
+      },
+      "ACCESS": {
+        "description": "Who may open the dashboard: anyone, admins, editors, managers, group:<id>, manager:<id>. Comma-separated."
+      }
+    }
+  }
+}

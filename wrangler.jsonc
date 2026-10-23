@@ -1,0 +1,26 @@
+// Cloudflare Workers settings: https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "monotree-dashboard",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // the Worker runs before any file is served, so the page itself needs a sign-in too
+    "run_worker_first": true
+  },
+  "vars": {
+    // the customer's Monotree, exactly as in its discovery document, no trailing slash
+    "MONOTREE_ISSUER": "https://acme.monotree.com",
+    // the client_id Monotree gave you when it registered this dashboard
+    "OIDC_CLIENT_ID": "",
+    // who may open the dashboard: anyone, admins, editors, managers, group:<id>, manager:<id>
+    // comma-separated, any match is enough. See src/access.ts
+    "ACCESS": "admins"
+  }
+  // secrets are not kept in this file. Set them with `npx wrangler secret put <NAME>`:
+  //   OIDC_CLIENT_SECRET   from Monotree, with the client_id
+  //   MONOTREE_API_KEY     an Open API key (mono_...) with only the scopes src/data.ts needs
+  //   SESSION_SECRET       a long random string: `openssl rand -base64 32`
+}
