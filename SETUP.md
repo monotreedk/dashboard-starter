@@ -7,7 +7,8 @@ How to work with them:
 - Explain each step in one plain sentence before you do it. Ask one thing at a time.
 - Do the technical work yourself: downloading, installing, editing files, deploying.
 - **Never ask them to paste a secret into the chat.** The client secret and the API key go straight into Cloudflare, by their own hand (step 7). The client id and the Monotree address are not secret.
-- Some steps happen outside your reach: an email to Monotree, the Monotree CMS, the Cloudflare website. For those, give exact click paths, then wait until they say they're done.
+- Some steps happen outside your reach: the Monotree CMS, the Cloudflare website. For those, give exact click paths, then wait until they say they're done.
+- Steps 5, 6 and 9 need a **Monotree admin**. Ask early whether they are one; if not, they'll need one at hand for those steps.
 
 ## 1. Get the template onto their computer
 
@@ -38,29 +39,34 @@ Run `npx wrangler login`. A browser window opens, where they sign in to Cloudfla
    node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))" | npx wrangler secret put SESSION_SECRET
    ```
 
-## 5. Ask Monotree to register the dashboard
+## 5. Register the dashboard for Sign in with Monotree
 
-Write the email for them to send to their Monotree contact, with the address from step 4 filled in:
+A Monotree admin registers it in the Monotree CMS: **Integrations → Sign in with Monotree → Register website**. Tell them:
 
-> Subject: Sign in with Monotree for our dashboard
->
-> Please register our dashboard for Sign in with Monotree on `<their Monotree address>`:
->
-> - Client type: confidential
+- **Name:** something employees will recognise; they see it when they sign in.
+- **Address:** the address from step 4, without a path, e.g. `https://acme-dashboard.acme.workers.dev`. The sign-in addresses are derived from it.
+- The dialog then shows the **client id**, which they can give you, and the **client secret**, which goes to Cloudflare in step 7. The secret is shown only once, so they should keep the dialog open until step 7.
+
+If you are connected to their Monotree as an admin through the Monotree MCP server, you can call `register_sign_in_client` with the name and address instead. It returns the client id and a link to the CMS, but never the secret: send them the link, where they press **New secret** and keep the page open for step 7.
+
+If the CMS doesn't have **Integrations → Sign in with Monotree** yet, write an email to their Monotree contact instead, asking them to register a confidential client with:
+
 > - Name: `<a name employees will recognise>`
 > - Redirect URI: `https://<address>/auth/callback`
 > - Login initiation URI: `https://<address>/auth/initiate`
 > - Target link prefix: `https://<address>/`
 
-Monotree replies with a **client id**, which they can give you, and a **client secret**, which goes to Cloudflare in step 7. Carry on with step 6 while they wait.
+Monotree replies with the client id and the client secret. Carry on with step 6 while they wait.
 
 ## 6. Create an API key in Monotree
 
-The person, or a Monotree admin, creates it in the Monotree CMS: **Open API → API Tokens → create**. Tell them:
+A Monotree admin creates it in the Monotree CMS: **Integrations → API Tokens → Create Token**. Tell them:
 
 - which scopes to tick: only those `src/data.ts` needs, which is `read:stats` and `read:groups` for the example
 - to name it after the dashboard
 - that the key is shown only once, so they should keep the page open for step 7
+
+Through the Monotree MCP server, `create_api_token` with the name and those scopes does the same. It never returns the key: send them the link it returns, where they press **New key** on the token.
 
 ## 7. They put the two secrets into Cloudflare
 
@@ -68,7 +74,7 @@ Guide them in the Cloudflare website:
 
 1. **Workers & Pages** → their dashboard's Worker → **Settings** → **Variables and Secrets** → **Add**.
 2. Type **Secret**, name `MONOTREE_API_KEY`, value: the API key from step 6.
-3. Again: type **Secret**, name `OIDC_CLIENT_SECRET`, value: the client secret from Monotree.
+3. Again: type **Secret**, name `OIDC_CLIENT_SECRET`, value: the client secret from step 5.
 
 Secrets added there are kept by later deploys.
 
@@ -93,6 +99,8 @@ A Monotree admin adds a menu link in the CMS:
 - type **External app**
 - URL `https://<address>/`
 - targeted at the same people as `ACCESS`, so nobody sees a link they can't open
+
+Through the Monotree MCP server, `create_app_link` with the title, the address and the group ids makes it as a draft; the admin publishes it from the link it returns.
 
 Ask them to tap it in the Monotree app. They should land on the dashboard without logging in.
 

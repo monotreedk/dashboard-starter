@@ -51,7 +51,7 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 
 ## Running it locally
 
-`npm run dev` serves the dashboard at `http://localhost:8787`. Sign-in needs a client registered for that address, so ask Monotree for a test client with these addresses (plain `http` is allowed on localhost):
+`npm run dev` serves the dashboard at `http://localhost:8787`. Sign-in needs a client registered for that address. The CMS only registers https addresses, so ask Monotree for a test client with these addresses (plain `http` is allowed on localhost):
 
 - redirect URI `http://localhost:8787/auth/callback`
 - login initiation URI `http://localhost:8787/auth/initiate`
