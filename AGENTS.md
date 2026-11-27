@@ -2,6 +2,8 @@
 
 This repository is a dashboard over a company's Monotree data. It runs as a Cloudflare Worker, and employees open it from the Monotree app, already signed in. Read this whole file before you change anything. The rules under "Rules" are not style preferences: breaking one leaks employee data.
 
+The example dashboard is a starting point, not a template to stay inside. Build what the user asks for, even if it looks nothing like it. What must hold are the rules, not the file layout.
+
 **Setting up a new dashboard for someone?** Follow [SETUP.md](SETUP.md) step by step.
 
 ## How it works
@@ -16,18 +18,23 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 
 - **Sign-in** is "Sign in with Monotree" (OpenID Connect). An employee who opens the dashboard from the Monotree app arrives signed in, with no prompt. Anyone else is sent to the Monotree login page.
 - **Who may see it** is the `ACCESS` setting in `wrangler.jsonc`, checked once at sign-in against the employee's roles and groups. See `src/access.ts`.
-- **The data** comes from the [Monotree Open API](https://docs.monotree.com/open-api/) with a key that stays on the server. The browser only ever sees what `src/data.ts` returns.
+- **The data** comes from the [Monotree Open API](https://docs.monotree.com/open-api/) with a key that stays on the server. The browser only ever sees what the Worker hands it. Named datasets in `src/data.ts`, which the page pulls, are the default pattern.
+- **Live updates** are the other pattern: an [outgoing webhook](https://docs.monotree.com/llms.txt) goes to the Worker (see "Routes that skip sign-in"), and a Durable Object fans it out over WebSocket to signed-in pages. Strip people (user objects, names) from the payload before it reaches the browser (rule 4).
 - **Data can depend on who is looking.** A dataset with a `viewerKey` gets the signed-in employee (`sub`, `name`, `roles`, `groups`, `managed_groups`) from the session, never from the browser. The example uses it to show a manager their own departments. `/auth/me` returns the same object to the page.
 
 ## Files
 
+The rules protect what each file guarantees, not the files themselves. Add files and change what you need.
+
 | File | Change it? | What it is |
 |---|---|---|
 | `src/data.ts` | **Yes** | The datasets: which API calls are made and what is returned, shared or per viewer |
-| `public/index.html`, `public/app.js`, `public/style.css` | **Yes** | The page. `load("<name>")` in `app.js` fetches a dataset |
-| `wrangler.jsonc` | Settings only | Issuer, client id, `ACCESS` |
+| `public/` | **Yes** | The page. `load("<name>")` in `app.js` fetches a dataset |
+| `src/worker.ts` | **Yes**, see "Changing the Worker" | The routes, the session check, security headers. Add routes freely. Anything that isn't sign-in goes behind the session check. Keep the security headers |
+| `src/monotree.ts` | **Yes** | The API client. Extend it freely. The key stays on the server (rule 1) |
+| `wrangler.jsonc` | Settings and bindings | Issuer, client id, `ACCESS` (rule 9), and bindings for what you add, such as a Durable Object |
 | `src/access.ts` | Rarely | The `ACCESS` words. Add a word here if you need a new kind of rule |
-| `src/worker.ts`, `src/oidc.ts`, `src/session.ts`, `src/monotree.ts` | **No**, unless asked | Sign-in, sessions, security headers, the API client |
+| `src/oidc.ts`, `src/session.ts` | Only if asked | Sign-in and the sealed session cookie (rule 8) |
 | `scripts/snapshot.ts`, `wrangler.snapshot.jsonc` | No | Snapshot mode, see below |
 
 ## Rules
@@ -41,6 +48,25 @@ Monotree app ──tap──▶ /auth/initiate ──▶ Monotree sign-in ──
 7. **Keep the security headers.** If the page needs a script or style from another host, add that one host to `content-security-policy` in `src/worker.ts`. Don't remove the policy or add `*`. Load libraries from a pinned version with an `integrity` hash, as `index.html` does with Chart.js. Every CDN request also tells that CDN the viewer's IP address.
 8. **Don't touch sign-in.** In particular, never add `prompt=login` (it breaks opening from the app), never log `login_hint`, and never weaken the checks in `src/oidc.ts`.
 9. **`ACCESS` is the customer's decision.** It ships as `admins,managers`. Don't widen it unless the user asks for it in so many words.
+
+## Changing the Worker
+
+`src/worker.ts` is mostly a route switch: the `/auth/*` routes first, then the session check (`if (!session)`), then everything a signed-in viewer may reach. Before you finish a change to it, check each of these:
+
+- **A new route that serves data, a page or a WebSocket goes after the session check**, never in the `switch` above it. Above the check belong only sign-in and the routes in "Routes that skip sign-in".
+- **It still forwards nothing to the API** (rule 2). A route takes a name, not a path or filter. Per-viewer data still comes from `session` (rule 3).
+- **Responses keep the security headers**: build them with `json`, `page`, `redirect` or `withHeaders`. The one exception is a WebSocket upgrade (status 101): return it as the Durable Object gives it, because `withHeaders` would drop the socket.
+- **A WebSocket route checks `Origin`** against `url.origin` and refuses others. The browser sends the session cookie with an upgrade from any site, and the CSP doesn't stop that. Send every socket only what every viewer who may open the page may see, shaped as in rule 4: a socket stays open after the session that let it in expires.
+- `npm test` and `npm run check` pass.
+
+## Routes that skip sign-in
+
+Some callers can't sign in, such as Monotree delivering an [outgoing webhook](https://docs.monotree.com/llms.txt). Their route goes in the `switch` next to the `/auth` routes, and must:
+
+- **Verify the signature before trusting anything**, including the body's JSON. Follow "OUTGOING WEBHOOKS → Signature verification" in <https://docs.monotree.com/llms.txt>: HMAC-SHA256 of the `Timestamp` header, a `.` and the raw body, compared with the `Signature` header in constant time, and a `Timestamp` no more than 5 minutes old.
+- **Reject what can't be verified** with a 401, before doing anything else with it.
+- **Never return data.** Answer with an empty 2xx, within 3 seconds (Monotree retries slower answers). Do slow work in `context.waitUntil` or a Durable Object.
+- **Keep the signing secret in a Worker secret** (`wrangler secret put`, and `.dev.vars` locally), as rule 1 says.
 
 ## Adding a chart
 
