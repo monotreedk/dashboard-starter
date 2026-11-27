@@ -15,7 +15,7 @@ You don't need to be a developer. You need:
 - **An AI assistant that can work on your computer**, such as [Claude Code](https://claude.com/claude-code), Cursor or Codex. A chat window alone can't download and deploy things.
 - **A Cloudflare account.** The free plan is enough, and the assistant helps you create one.
 - **A Monotree admin**, to create an API key and add the dashboard to the app.
-- **About half an hour**, plus a reply from Monotree, which registers the dashboard for sign-in.
+- **About half an hour**, and a Monotree admin to register the dashboard for sign-in in the Monotree CMS.
 
 Paste this into your assistant:
 
@@ -24,7 +24,7 @@ Set up a Monotree dashboard for me from https://github.com/monotreedk/dashboard-
 Follow its SETUP.md.
 ```
 
-It downloads the template, asks what you want to see and who should see it, writes the email to send to Monotree, and does the rest. It never needs your passwords or keys: you type those into Cloudflare yourself.
+It downloads the template, asks what you want to see and who should see it, tells your Monotree admin where to register it, and does the rest. It never needs your passwords or keys: you type those into Cloudflare yourself.
 
 Developers can follow [SETUP.md](SETUP.md) by hand. The commands are the same.
 
