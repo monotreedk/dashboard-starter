@@ -9,8 +9,8 @@
 //   /data/<name>     a dataset from src/data.ts
 //   anything else    the files in public/
 //
-// You should not need to change this file. The data lives in src/data.ts and
-// the page in public/.
+// The data lives in src/data.ts and the page in public/. Add routes here as you
+// need them: "Changing the Worker" in AGENTS.md says what each must keep.
 
 import { allows, parseAccess, type Viewer } from "./access.ts";
 import { datasets } from "./data.ts";
