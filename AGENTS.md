@@ -30,7 +30,7 @@ The rules protect what each file guarantees, not the files themselves. Add files
 |---|---|---|
 | `src/data.ts` | **Yes** | The datasets: which API calls are made and what is returned, shared or per viewer |
 | `public/` | **Yes** | The page. `load("<name>")` in `app.js` fetches a dataset |
-| `src/worker.ts` | **Yes**, see "Changing the Worker" | The routes, the session check, security headers. Add routes freely. Anything that isn't sign-in goes behind the session check. Keep the security headers |
+| `src/worker.ts` | **Yes**, see "Changing the Worker" | The routes, the sign-in flow, the session check, security headers. Add routes freely. Anything that isn't sign-in goes behind the session check. Keep the security headers, and leave the sign-in code as it is (rule 8) |
 | `src/monotree.ts` | **Yes** | The API client. Extend it freely. The key stays on the server (rule 1) |
 | `wrangler.jsonc` | Settings and bindings | Issuer, client id, `ACCESS` (rule 9), and bindings for what you add, such as a Durable Object |
 | `src/access.ts` | Rarely | The `ACCESS` words. Add a word here if you need a new kind of rule |
@@ -51,12 +51,13 @@ The rules protect what each file guarantees, not the files themselves. Add files
 
 ## Changing the Worker
 
-`src/worker.ts` is mostly a route switch: the `/auth/*` routes first, then the session check (`if (!session)`), then everything a signed-in viewer may reach. Before you finish a change to it, check each of these:
+`src/worker.ts` is mostly a route switch: the four sign-in routes first (`/auth/initiate`, `/auth/login`, `/auth/callback`, `/auth/logout`), then the session check (`if (!session)`), then everything a signed-in viewer may reach, `/auth/me` included. Before you finish a change to it, check each of these:
 
 - **A new route that serves data, a page or a WebSocket goes after the session check**, never in the `switch` above it. Above the check belong only sign-in and the routes in "Routes that skip sign-in".
+- **Add around sign-in, don't edit it** (rule 8): `initiate`, `callback`, `startSignIn`, `safePath` and the session check stay as they are.
 - **It still forwards nothing to the API** (rule 2). A route takes a name, not a path or filter. Per-viewer data still comes from `session` (rule 3).
 - **Responses keep the security headers**: build them with `json`, `page`, `redirect` or `withHeaders`. The one exception is a WebSocket upgrade (status 101): return it as the Durable Object gives it, because `withHeaders` would drop the socket.
-- **A WebSocket route checks `Origin`** against `url.origin` and refuses others. The browser sends the session cookie with an upgrade from any site, and the CSP doesn't stop that. Send every socket only what every viewer who may open the page may see, shaped as in rule 4: a socket stays open after the session that let it in expires.
+- **A WebSocket route checks `Origin`** against `url.origin` and refuses others. WebSockets ignore CORS, and the session cookie's `SameSite=Lax` keeps out other sites but not other subdomains of the same domain. If the CSP blocks the page's own socket, add its `wss://` origin to `connect-src`, never `*`. Send every socket only what every viewer who may open the page may see, shaped as in rule 4: a socket stays open after the session that let it in expires.
 - `npm test` and `npm run check` pass.
 
 ## Routes that skip sign-in
